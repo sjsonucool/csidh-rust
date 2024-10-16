@@ -1,5 +1,10 @@
 use libc;
 
+use std::sync::{Mutex, MutexGuard};
+use once_cell::sync::Lazy;
+
+static CSIDH_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
 const NUM_PRIMES: usize = 74;
 
 pub const PUBLIC_KEY_LEN: usize = 64;
@@ -99,6 +104,9 @@ extern "C" {
 pub fn generate_private() -> CSIDHPrivateKey {
     let mut sk = CSIDHPrivateKey::new();
 
+    // Acquire the mutex
+    let _lock = CSIDH_MUTEX.lock().unwrap();
+
     unsafe {
         csidh_generate(&mut sk as *mut CSIDHPrivateKey);
     }
@@ -107,6 +115,10 @@ pub fn generate_private() -> CSIDHPrivateKey {
 
 pub fn public_from_private(key: &CSIDHPrivateKey) -> CSIDHPublicKey {
     let mut pk = CSIDHPublicKey::new();
+
+    // Acquire the mutex
+    let _lock = CSIDH_MUTEX.lock().unwrap();
+
     unsafe {
         csidh_derive(
             &mut pk as *mut CSIDHPublicKey,
@@ -124,6 +136,10 @@ pub fn keypair() -> (CSIDHPublicKey, CSIDHPrivateKey) {
 
 pub fn agreement(theirs: &CSIDHPublicKey, ours: &CSIDHPrivateKey) -> [u8; 64] {
     let mut agreed = CSIDHPublicKey::new();
+
+    // Acquire the mutex
+    let _lock = CSIDH_MUTEX.lock().unwrap();
+
     unsafe {
         csidh_derive(
             &mut agreed as *mut CSIDHPublicKey,
